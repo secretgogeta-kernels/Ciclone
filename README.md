@@ -31,6 +31,7 @@ Benchmarks were conducted on a virtual machine running **Ubuntu** with the follo
 | **Cyclone AVX512** | ~64 (estimated) | ~25% faster than AVX2, computing 16 hash160 per batch                                      |
 
 Also avx2 version was tested on Ryzen 9 7945HX (16cores, 32 threads), speed - 140 Mkey/s
+
 ---
 ## 🔷 Example Output
 
