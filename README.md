@@ -1,4 +1,4 @@
-# 🚀 Cyclone: The World's Fastest Satoshi Puzzle Solver
+# 🚀 Cyclone: The World's Fastest CPU Satoshi Puzzle Solver
 
 Cyclone is the fastest Satoshi puzzle solver in the world, leveraging the power of modern CPU instructions such as **AVX2** and **AVX512** to achieve unparalleled performance. Designed to run on **Linux**, Cyclone is optimized for speed and accuracy, making it the ideal tool for solving cryptographic puzzles.
 Secp256k1 math are based on the excellent work from JeanLucPons/VanitySearch (https://github.com/JeanLucPons/VanitySearch), with a few modifications.
