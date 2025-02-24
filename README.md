@@ -29,8 +29,8 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 | **Cyclone AVX2**   | 51.21           | Full and correct computation of compressed public keys, computing 8 hash160 per batch      |
 
 - **Processor**: Ryzen 9 7945HX (16 cores, 32 threads)
-- **Memory**: 32 GB DDR4 (2x16 GB)
-- **Virtualization Software**: VMware® Workstation 17 (Home)
+- **Memory**: 32 GB DDR5 (32 GB)
+- **Ubuntu 24.04**
 
 | Solver             | Speed (Mkeys/s) | Notes                                                                                      |
 |--------------------|-----------------|--------------------------------------------------------------------------------------------|
