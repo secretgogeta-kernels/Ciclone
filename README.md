@@ -18,7 +18,6 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 
 ## 📊 Results Comparison
 
-Benchmarks were conducted on a virtual machine running **Ubuntu** with the following specifications:
 - **Processor**: Ryzen 7 5800H (8 cores, 16 threads)
 - **Memory**: 32 GB DDR4 (2x16 GB)
 - **Virtualization Software**: VMware® Workstation 17 (Home)
@@ -28,10 +27,16 @@ Benchmarks were conducted on a virtual machine running **Ubuntu** with the follo
 | **Vanity Search**  | 35.91           | No option to select a range of private keys for search.                                    |
 | **Keyhunt**        | 43              | Incorrectly computes hashes and addresses by omitting the Y coordinates for compress mode  |
 | **Cyclone AVX2**   | 51.21           | Full and correct computation of compressed public keys, computing 8 hash160 per batch      |
-| **Cyclone AVX512** | ~64 (estimated) | ~25% faster than AVX2, computing 16 hash160 per batch                                      |
 
-Also AVX2 version was tested on Ryzen 9 7945HX (16cores, 32 threads), speed - 140 Mkey/s.
-AVX512 version will be tested soon (21 Feb). Expected speed - 175Mkey/s.
+- **Processor**: Ryzen 9 7945HX (16 cores, 32 threads)
+- **Memory**: 32 GB DDR4 (2x16 GB)
+- **Virtualization Software**: VMware® Workstation 17 (Home)
+
+| Solver             | Speed (Mkeys/s) | Notes                                                                                      |
+|--------------------|-----------------|--------------------------------------------------------------------------------------------|
+| **Vanity Search**  | 120             | No option to select a range of private keys for search.                                    |
+| **Cyclone AVX2**   | 139             | Computing 8 hash160 per batch                                                              |
+| **Cyclone AVX512** | 159             | Computing 16 hash160 per batch                                                             |
 
 ---
 ## 🔷 Example Output
