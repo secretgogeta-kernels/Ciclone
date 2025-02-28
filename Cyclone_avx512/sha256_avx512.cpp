@@ -6,8 +6,6 @@
 #ifdef _MSC_VER
 #define ALIGN64 __declspec(align(64))
 #else
-// Можно использовать либо GCC атрибут, либо alignas C++11.
-// #define ALIGN64 attribute((aligned(64)))
 #define ALIGN64 alignas(64)
 #endif
 
@@ -60,7 +58,6 @@ static void Transform(__m512i* state, const uint8_t* data[16]) {
   __m512i e = state[4], f = state[5], g = state[6], h = state[7];
   __m512i W[64], T1, T2;
 
-  // Загружаем W[0..15]
   for (int t = 0; t < 16; t++) {
     uint32_t tmp[16];
     for (int i = 0; i < 16; i++) {
@@ -78,7 +75,6 @@ static void Transform(__m512i* state, const uint8_t* data[16]) {
     );
   }
 
-  // Расширяем W[16..63]
   for (int t = 16; t < 64; t++) {
     W[t] = _mm512_add_epi32(
              _mm512_add_epi32(s1(W[t-2]), W[t-7]),
@@ -86,7 +82,6 @@ static void Transform(__m512i* state, const uint8_t* data[16]) {
            );
   }
 
-  // Основной цикл 64 раунда
   for (int t = 0; t < 64; t++) {
     __m512i Kt = _mm512_set1_epi32(K[t]);
     ROUND(a,b,c,d,e,f,g,h,Kt,W[t],T1,T2);
@@ -102,7 +97,6 @@ static void Transform(__m512i* state, const uint8_t* data[16]) {
   state[7] = _mm512_add_epi32(state[7], h);
 }
 
-// Функция, обрабатывающая 16 входных блоков по 64 байта с помощью AVX-512
 extern "C" void sha256_avx512_16B(
   const uint8_t* d0,  const uint8_t* d1,  const uint8_t* d2,  const uint8_t* d3,
   const uint8_t* d4,  const uint8_t* d5,  const uint8_t* d6,  const uint8_t* d7,
@@ -121,7 +115,6 @@ extern "C" void sha256_avx512_16B(
   };
   Transform(s, data);
 
-  // Сохраняем state[0..7] во временный массив tmp
   ALIGN64 uint32_t tmp[8][16];
   for (int i = 0; i < 8; i++) {
     _mm512_store_si512((__m512i*)tmp[i], s[i]);
@@ -132,7 +125,6 @@ extern "C" void sha256_avx512_16B(
     h8,h9,h10,h11,h12,h13,h14,h15
   };
 
-  // Копируем по 8 слов (32 байта) для каждого из 16 сообщений
   for (int i = 0; i < 16; i++) {
     for (int j = 0; j < 8; j++) {
       uint32_t w = tmp[j][i];

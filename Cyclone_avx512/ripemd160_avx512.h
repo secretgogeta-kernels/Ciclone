@@ -6,15 +6,10 @@
 
 namespace ripemd160avx512 {
 
-// Инициализация состояния
 void Initialize(__m512i* s);
 
-// Обработка одного 64-байтного блока для 16 сообщений
 void Transform(__m512i* state, uint8_t* blocks[16]);
 
-// Основная функция для 16 параллельных сообщений по 32 байта
-// (с последующим паддингом), выдаёт 20-байтовый результат на
-// каждый из 16 выходов.
 void ripemd160avx512_32(
     unsigned char* i0,   unsigned char* i1,   unsigned char* i2,   unsigned char* i3,
     unsigned char* i4,   unsigned char* i5,   unsigned char* i6,   unsigned char* i7,

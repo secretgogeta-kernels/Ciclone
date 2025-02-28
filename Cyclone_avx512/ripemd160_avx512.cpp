@@ -297,7 +297,6 @@ void ripemd160avx512_32(
     ripemd160avx512::Initialize(s);
 
     for (int i = 0; i < 16; ++i) {
-        // 32 байта данных, дополняем "1"-бит (0x80), затем нулями, длина=32*8=256 бит
         memcpy(bs[i] + 32, pad, 24);
         memcpy(bs[i] + 56, &sizedesc_32, 8);
     }
