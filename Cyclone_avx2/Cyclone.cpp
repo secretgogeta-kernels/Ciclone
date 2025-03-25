@@ -1,6 +1,9 @@
-//g++ -std=c++17 -Ofast -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -fipa-modref -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp
+// Compiling to Windows from Linux:
+// x86_64-w64-mingw32-g++ -std=c++17 -Ofast -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -static -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp -lws2_32
 
-//The software is developed for solving Satoshi's puzzles; any use for illegal purposes is strictly prohibited. The author is not responsible for any actions taken by the user when using this software for unlawful activities.
+//Compiling Linux:
+// g++ -std=c++17 -Ofast -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -fipa-modref -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp
+
 #include <immintrin.h>
 #include <iostream>
 #include <iomanip>
@@ -15,7 +18,19 @@
 #include <omp.h>
 #include <array>
 #include <utility>
-// Adding program modules
+
+#ifdef _WIN32
+    #include <windows.h>
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "ws2_32.lib")
+    #define close closesocket
+#else
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+#endif
+
 #include "p2pkh_decoder.h"
 #include "sha256_avx2.h"
 #include "ripemd160_avx2.h"
@@ -24,12 +39,8 @@
 #include "Int.h"
 #include "IntGroup.h"
 
-//------------------------------------------------------------------------------
-// Batch size: ±256 public keys (512), hashed in groups of 8 (AVX2).
 static constexpr int POINTS_BATCH_SIZE = 256;
 static constexpr int HASH_BATCH_SIZE   = 8;
-
-// Status output and progress saving frequency
 static constexpr double statusIntervalSec = 5.0;
 static constexpr double saveProgressIntervalSec = 300.0;
 
@@ -37,8 +48,7 @@ static int g_progressSaveCount = 0;
 static std::vector<std::string> g_threadPrivateKeys;
 
 //------------------------------------------------------------------------------
-void saveProgressToFile(const std::string &progressStr)
-{
+void saveProgressToFile(const std::string &progressStr) {
     std::ofstream ofs("progress.txt", std::ios::app);
     if (ofs) {
         ofs << progressStr << "\n";
@@ -48,8 +58,6 @@ void saveProgressToFile(const std::string &progressStr)
 }
 
 //------------------------------------------------------------------------------
-//Converts a HEX string into a large number (a vector of 64-bit words, little-endian).
-
 std::vector<uint64_t> hexToBigNum(const std::string& hex) {
     std::vector<uint64_t> bigNum;
     const size_t len = hex.size();
@@ -62,8 +70,6 @@ std::vector<uint64_t> hexToBigNum(const std::string& hex) {
     }
     return bigNum;
 }
-
-//Reverse conversion to a HEX string (with correct leading zeros within blocks).
 
 std::string bigNumToHex(const std::vector<uint64_t>& num) {
     std::ostringstream oss;
@@ -100,7 +106,7 @@ std::vector<uint64_t> bigNumSubtract(const std::vector<uint64_t>& a, const std::
     for (size_t i = 0; i < b.size(); ++i) {
         uint64_t subtrahend = b[i];
         if (diff[i] < subtrahend + borrow) {
-            diff[i] = diff[i] + (~0ULL) - subtrahend - borrow + 1ULL; // eqv diff[i] = diff[i] - subtrahend - borrow
+            diff[i] = diff[i] + (~0ULL) - subtrahend - borrow + 1ULL;
             borrow = 1ULL;
         } else {
             diff[i] -= (subtrahend + borrow);
@@ -116,12 +122,10 @@ std::vector<uint64_t> bigNumSubtract(const std::vector<uint64_t>& a, const std::
             borrow = 0ULL;
         }
     }
-    // delete leading zeros
     while (!diff.empty() && diff.back() == 0ULL)
         diff.pop_back();
     return diff;
 }
-
 
 std::pair<std::vector<uint64_t>, uint64_t> bigNumDivide(const std::vector<uint64_t>& a, uint64_t divisor) {
     std::vector<uint64_t> quotient(a.size(), 0ULL);
@@ -156,6 +160,7 @@ long double hexStrToLongDouble(const std::string &hex) {
 static inline std::string padHexTo64(const std::string &hex) {
     return (hex.size() >= 64) ? hex : std::string(64 - hex.size(), '0') + hex;
 }
+
 static inline Int hexToInt(const std::string &hex) {
     Int number;
     char buf[65] = {0};
@@ -163,17 +168,20 @@ static inline Int hexToInt(const std::string &hex) {
     number.SetBase16(buf);
     return number;
 }
+
 static inline std::string intToHex(const Int &value) {
     Int temp;
     temp.Set((Int*)&value);
     return temp.GetBase16();
 }
+
 static inline bool intGreater(const Int &a, const Int &b) {
     std::string ha = ((Int&)a).GetBase16();
     std::string hb = ((Int&)b).GetBase16();
     if (ha.size() != hb.size()) return (ha.size() > hb.size());
     return (ha > hb);
 }
+
 static inline bool isEven(const Int &number) {
     return ((Int&)number).IsEven();
 }
@@ -190,6 +198,7 @@ static inline std::string intXToHex64(const Int &x) {
 static inline std::string pointToCompressedHex(const Point &point) {
     return (isEven(point.y) ? "02" : "03") + intXToHex64(point.x);
 }
+
 static inline void pointToCompressedBin(const Point &point, uint8_t outCompressed[33]) {
     outCompressed[0] = isEven(point.y) ? 0x02 : 0x03;
     Int temp;
@@ -210,6 +219,7 @@ inline void prepareShaBlock(const uint8_t* dataSrc, size_t dataLen, uint8_t* out
     outBlock[62] = (uint8_t)((bitLen >>  8) & 0xFF);
     outBlock[63] = (uint8_t)( bitLen        & 0xFF);
 }
+
 inline void prepareRipemdBlock(const uint8_t* dataSrc, uint8_t* outBlock) {
     std::fill_n(outBlock, 64, 0);
     std::memcpy(outBlock, dataSrc, 32);
@@ -221,7 +231,6 @@ inline void prepareRipemdBlock(const uint8_t* dataSrc, uint8_t* outBlock) {
     outBlock[63] = (uint8_t)( bitLen        & 0xFF);
 }
 
-// Computing hash160 using avx2 (8 hashes per try)
 static void computeHash160BatchBinSingle(int numKeys,
                                          uint8_t pubKeys[][33],
                                          uint8_t hashResults[][20])
@@ -455,7 +464,6 @@ int main(int argc, char* argv[])
         #pragma omp critical
         {
             g_threadPrivateKeys[threadId] = padHexTo64(intToHex(privateKey));
-
         }
 
         // Precomputing +i*G and -i*G for i=0..255
@@ -703,4 +711,3 @@ int main(int argc, char* argv[])
     std::cout << "Speed         : " << mkeysPerSec << " Mkeys/s\n";
     return 0;
 }
-
