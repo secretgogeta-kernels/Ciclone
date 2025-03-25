@@ -1,6 +1,6 @@
 # 🚀 Cyclone: The World's Fastest CPU Satoshi Puzzle Solver
 
-Cyclone is the fastest CPU Satoshi puzzle solver in the world, leveraging the power of modern CPU instructions such as **AVX2** and **AVX512** to achieve unparalleled performance. Designed to run on **Linux**, Cyclone is optimized for speed and accuracy, making it the ideal tool for solving cryptographic puzzles.
+Cyclone is the fastest CPU Satoshi puzzle solver in the world, leveraging the power of modern CPU instructions such as **AVX2** and **AVX512** to achieve unparalleled performance. Designed to run on **Linux** and **Windows**, Cyclone is optimized for speed and accuracy, making it the ideal tool for solving cryptographic puzzles.
 Secp256k1 math are based on the excellent work from JeanLucPons/VanitySearch (https://github.com/JeanLucPons/VanitySearch), with a few modifications.
 I extend our gratitude to Jean-Luc Pons for his foundational contributions to the cryptographic community.
 
@@ -37,6 +37,8 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 | **Vanity Search**  | 120             | No option to select a range of private keys for search.                                    |
 | **Cyclone AVX2**   | 139             | Computing 8 hash160 per batch                                                              |
 | **Cyclone AVX512** | 159             | Computing 16 hash160 per batch                                                             |
+
+- **NB!** The Windows version of Cyclone performs 6–8% slower than the Linux version! 
 
 ---
 ## 🔷 Example Output
@@ -119,6 +121,10 @@ cd Сyclone
 cd Cyclone_avx512
 g++ -std=c++17 -Ofast -ffast-math -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -mavx512f -mavx512vl -mavx512bw -mavx512dq -fipa-modref -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp ripemd160_avx512.cpp sha256_avx512.cpp
 ```
+To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt install g++-mingw-w64-x86-64-posix**
+
+For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
+
 
 ## ✌️**TIPS**
 BTC: bc1qtq4y9l9ajeyxq05ynq09z8p52xdmk4hqky9c8n
