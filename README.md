@@ -125,6 +125,9 @@ To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt 
 
 For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
 
+## 🚧**VERSIONS**
+**V1.1**: Speed up to 20%
+**V1.0**: Release
 
 ## ✌️**TIPS**
 BTC: bc1qtq4y9l9ajeyxq05ynq09z8p52xdmk4hqky9c8n
