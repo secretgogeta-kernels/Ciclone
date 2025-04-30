@@ -13,6 +13,8 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 - **Flexible Implementations**: Choose between **AVX2** and **AVX512** implementations based on your hardware capabilities.
 - **Linux Compatibility**: Cyclone is designed to run seamlessly on Linux systems or Ubuntu Windows WSL 2.
 - **Progress saving**: Progress is saved every 5 minutes during work in the **progress.txt** file.
+- **Probabilistik search**: You can add -j key and jump forward after partial match between generated Hash160 and given Hash160
+- **Partial match**: You can add -p key and save all of the partial match Hash160 to the candidates.txt file
 
 ---
 
@@ -126,6 +128,7 @@ To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt 
 For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
 
 ## 🚧**VERSIONS**
+**V1.2**: Added keys: -p (partial match -> writes to the candidates.txt file, example -p 6 (comparison of the first 6 HEX) and -j (jump forward after partial match, example -j 1000000)
 **V1.1**: Speed up to 20% (AVX2 version!)  
 **V1.0**: Release
 
