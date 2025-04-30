@@ -45,7 +45,7 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 ---
 ## 🔷 Example Output
 
-Below is an example of Cyclone in action, solving a Satoshi puzzle:
+Below is an example of Cyclone in action, solving a Satoshi puzzle:  
 **Sequrntial search**
 ```bash
 root@ubuntu:/mnt/hgfs/VM/Final Cyclone# ./Cyclone -a 128z5d7nN7PkCuX5qoA4Ys6pmxUYnEy86k -r 875:6FAC3875
