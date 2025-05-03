@@ -51,8 +51,8 @@ static void appendCandidateToFile(const std::string& privHex,
                                   const std::string& pubHex,
                                   const std::string& hash160Hex)
 {
-    ++g_candidatesFound;                 // счётчик растёт всегда
-    if (!g_saveCandidates) return;       // но запись только при -s
+    ++g_candidatesFound;                
+    if (!g_saveCandidates) return;    
 
 #pragma omp critical(candidates_io)
     {
@@ -314,7 +314,7 @@ static void printStats(int nCPU,
                        bool showJump,
                        unsigned long long jumpCnt)
 {
-    const int lines = 10 + (showCand?1:0) + (showJump?1:0); // +1 за Hash160
+    const int lines = 10 + (showCand?1:0) + (showJump?1:0); 
     static bool first=true;
     if(!first) std::cout<<"\033["<<lines<<"A";
     else       first=false;
