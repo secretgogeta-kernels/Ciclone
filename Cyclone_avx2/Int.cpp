@@ -81,73 +81,21 @@ void Int::Set(Int *a) {
 
 // ------------------------------------------------
 
-void Int::Add(Int *a)
-{
-    uint64_t acc0 = bits64[0];
-    uint64_t acc1 = bits64[1];
-    uint64_t acc2 = bits64[2];
-    uint64_t acc3 = bits64[3];
-    uint64_t acc4 = bits64[4];
+void Int::Add(Int *a) {
 
+  unsigned char c = 0;
+  c = _addcarry_u64(c, bits64[0], a->bits64[0], bits64 +0);
+  c = _addcarry_u64(c, bits64[1], a->bits64[1], bits64 +1);
+  c = _addcarry_u64(c, bits64[2], a->bits64[2], bits64 +2);
+  c = _addcarry_u64(c, bits64[3], a->bits64[3], bits64 +3);
+  c = _addcarry_u64(c, bits64[4], a->bits64[4], bits64 +4);
 #if NB64BLOCK > 5
-    uint64_t acc5 = bits64[5];
-    uint64_t acc6 = bits64[6];
-    uint64_t acc7 = bits64[7];
-    uint64_t acc8 = bits64[8];
+  c = _addcarry_u64(c, bits64[5], a->bits64[5], bits64 +5);
+  c = _addcarry_u64(c, bits64[6], a->bits64[6], bits64 +6);
+  c = _addcarry_u64(c, bits64[7], a->bits64[7], bits64 +7);
+  c = _addcarry_u64(c, bits64[8], a->bits64[8], bits64 +8);
 #endif
 
-    asm (
-        "add %[src0], %[dst0]    \n\t"  
-        "adc %[src1], %[dst1]    \n\t"  
-        "adc %[src2], %[dst2]    \n\t"
-        "adc %[src3], %[dst3]    \n\t"
-        "adc %[src4], %[dst4]    \n\t"
-#if NB64BLOCK > 5
-
-        "adc %[src5], %[dst5]    \n\t"
-        "adc %[src6], %[dst6]    \n\t"
-        "adc %[src7], %[dst7]    \n\t"
-        "adc %[src8], %[dst8]    \n\t"
-#endif
-
-        : [dst0] "+r"(acc0),
-          [dst1] "+r"(acc1),
-          [dst2] "+r"(acc2),
-          [dst3] "+r"(acc3),
-          [dst4] "+r"(acc4)
-#if NB64BLOCK > 5
-        , [dst5] "+r"(acc5),
-          [dst6] "+r"(acc6),
-          [dst7] "+r"(acc7),
-          [dst8] "+r"(acc8)
-#endif
-
-        : [src0] "r"(a->bits64[0]),
-          [src1] "r"(a->bits64[1]),
-          [src2] "r"(a->bits64[2]),
-          [src3] "r"(a->bits64[3]),
-          [src4] "r"(a->bits64[4])
-#if NB64BLOCK > 5
-        , [src5] "r"(a->bits64[5]),
-          [src6] "r"(a->bits64[6]),
-          [src7] "r"(a->bits64[7]),
-          [src8] "r"(a->bits64[8])
-#endif
-        : "cc"
-    );
-
-    bits64[0] = acc0;
-    bits64[1] = acc1;
-    bits64[2] = acc2;
-    bits64[3] = acc3;
-    bits64[4] = acc4;
-
-#if NB64BLOCK > 5
-    bits64[5] = acc5;
-    bits64[6] = acc6;
-    bits64[7] = acc7;
-    bits64[8] = acc8;
-#endif
 }
 
 // ------------------------------------------------
@@ -188,70 +136,21 @@ void Int::AddOne() {
 
 // ------------------------------------------------
 
-void Int::Add(Int *a, Int *b)
-{
-    uint64_t acc0 = a->bits64[0];
-    uint64_t acc1 = a->bits64[1];
-    uint64_t acc2 = a->bits64[2];
-    uint64_t acc3 = a->bits64[3];
-    uint64_t acc4 = a->bits64[4];
+void Int::Add(Int *a,Int *b) {
 
+  unsigned char c = 0;
+  c = _addcarry_u64(c, b->bits64[0], a->bits64[0], bits64 +0);
+  c = _addcarry_u64(c, b->bits64[1], a->bits64[1], bits64 +1);
+  c = _addcarry_u64(c, b->bits64[2], a->bits64[2], bits64 +2);
+  c = _addcarry_u64(c, b->bits64[3], a->bits64[3], bits64 +3);
+  c = _addcarry_u64(c, b->bits64[4], a->bits64[4], bits64 +4);
 #if NB64BLOCK > 5
-    uint64_t acc5 = a->bits64[5];
-    uint64_t acc6 = a->bits64[6];
-    uint64_t acc7 = a->bits64[7];
-    uint64_t acc8 = a->bits64[8];
+  c = _addcarry_u64(c, b->bits64[5], a->bits64[5], bits64 +5);
+  c = _addcarry_u64(c, b->bits64[6], a->bits64[6], bits64 +6);
+  c = _addcarry_u64(c, b->bits64[7], a->bits64[7], bits64 +7);
+  c = _addcarry_u64(c, b->bits64[8], a->bits64[8], bits64 +8);
 #endif
 
-    asm(
-        "add %[b0], %[a0]       \n\t"
-        "adc %[b1], %[a1]       \n\t"
-        "adc %[b2], %[a2]       \n\t"
-        "adc %[b3], %[a3]       \n\t"
-        "adc %[b4], %[a4]       \n\t"
-#if NB64BLOCK > 5
-        "adc %[b5], %[a5]       \n\t"
-        "adc %[b6], %[a6]       \n\t"
-        "adc %[b7], %[a7]       \n\t"
-        "adc %[b8], %[a8]       \n\t"
-#endif
-        : [a0] "+r"(acc0),
-          [a1] "+r"(acc1),
-          [a2] "+r"(acc2),
-          [a3] "+r"(acc3),
-          [a4] "+r"(acc4)
-#if NB64BLOCK > 5
-        , [a5] "+r"(acc5),
-          [a6] "+r"(acc6),
-          [a7] "+r"(acc7),
-          [a8] "+r"(acc8)
-#endif
-        : [b0] "r"(b->bits64[0]),
-          [b1] "r"(b->bits64[1]),
-          [b2] "r"(b->bits64[2]),
-          [b3] "r"(b->bits64[3]),
-          [b4] "r"(b->bits64[4])
-#if NB64BLOCK > 5
-        , [b5] "r"(b->bits64[5]),
-          [b6] "r"(b->bits64[6]),
-          [b7] "r"(b->bits64[7]),
-          [b8] "r"(b->bits64[8])
-#endif
-        : "cc"
-    );
-
-    bits64[0] = acc0;
-    bits64[1] = acc1;
-    bits64[2] = acc2;
-    bits64[3] = acc3;
-    bits64[4] = acc4;
-
-#if NB64BLOCK > 5
-    bits64[5] = acc5;
-    bits64[6] = acc6;
-    bits64[7] = acc7;
-    bits64[8] = acc8;
-#endif
 }
 
 // ------------------------------------------------
@@ -721,7 +620,7 @@ bool Int::IsStrictPositive() {
 
 // ------------------------------------------------
 
-bool Int::IsEven() {
+bool Int::IsEven() const {
   return (bits[0] & 0x1) == 0;
 }
 
@@ -977,84 +876,10 @@ void Int::Mult(Int *a,Int *b) {
 
 // ------------------------------------------------
 
-uint64_t Int::Mult(Int *a,uint32_t b)
-{
-#if defined(__BMI2__) && (NB64BLOCK == 5)
-    uint64_t a0 = a->bits64[0];
-    uint64_t a1 = a->bits64[1];
-    uint64_t a2 = a->bits64[2];
-    uint64_t a3 = a->bits64[3];
-    uint64_t a4 = a->bits64[4];
-
-    uint64_t carry; 
-
-    asm volatile(
-        "xor %%r10, %%r10              \n\t"  // r10 = carry=0
-
-        // i=0
-        "mov %[A0], %%rdx              \n\t"  // RDX = a0
-        "mulx %[B], %%r8, %%r9         \n\t"  // (r9:r8) = a0*b
-        "add %%r10, %%r8               \n\t"  // r8 += carry
-        "adc $0, %%r9                  \n\t"  // r9 += CF
-        "mov %%r8, 0(%[DST])           \n\t"  // bits64[0] = r8
-        "mov %%r9, %%r10               \n\t"  // carry = r9
-
-        // i=1
-        "mov %[A1], %%rdx              \n\t"  
-        "mulx %[B], %%r8, %%r9         \n\t"  // (r9:r8) = a1*b
-        "add %%r10, %%r8               \n\t"
-        "adc $0, %%r9                  \n\t"
-        "mov %%r8, 8(%[DST])           \n\t"  // bits64[1]
-        "mov %%r9, %%r10               \n\t"
-
-        // i=2
-        "mov %[A2], %%rdx              \n\t"
-        "mulx %[B], %%r8, %%r9         \n\t"
-        "add %%r10, %%r8               \n\t"
-        "adc $0, %%r9                  \n\t"
-        "mov %%r8, 16(%[DST])          \n\t"  // bits64[2]
-        "mov %%r9, %%r10               \n\t"
-
-        // i=3
-        "mov %[A3], %%rdx              \n\t"
-        "mulx %[B], %%r8, %%r9         \n\t"
-        "add %%r10, %%r8               \n\t"
-        "adc $0, %%r9                  \n\t"
-        "mov %%r8, 24(%[DST])          \n\t"  // bits64[3]
-        "mov %%r9, %%r10               \n\t"
-
-        // i=4
-        "mov %[A4], %%rdx              \n\t"
-        "mulx %[B], %%r8, %%r9         \n\t"
-        "add %%r10, %%r8               \n\t"
-        "adc $0, %%r9                  \n\t"
-        "mov %%r8, 32(%[DST])          \n\t"  // bits64[4]
-        "mov %%r9, %%r10               \n\t"
-
-        "mov %%r10, %[CARRY]           \n\t"
-        : [CARRY] "=r"(carry)
-        : [DST] "r"(bits64),
-          [A0] "r"(a0),
-          [A1] "r"(a1),
-          [A2] "r"(a2),
-          [A3] "r"(a3),
-          [A4] "r"(a4),
-          [B]  "r"((uint64_t)b)
-        : "cc", "rdx", "r8", "r9", "r10", "memory"
-    );
-
-    return carry;
-
-#else
-
-    __uint128_t c = 0;
-    for (int i = 0; i < NB64BLOCK; i++) {
-        __uint128_t prod = ( __uint128_t(a->bits64[i]) ) * b + c;
-        bits64[i] = (uint64_t)prod;
-        c = prod >> 64;
-    }
-    return (uint64_t)c;
-#endif
+uint64_t Int::Mult(Int *a,uint32_t b) {
+  uint64_t carry;
+  imm_mul(a->bits64, (uint64_t)b, bits64, &carry);
+  return carry;
 }
 
 // ------------------------------------------------
@@ -1191,90 +1016,105 @@ void Int::Rand(Int *randMax) {
 
 // ------------------------------------------------
 
-void Int::Div(Int *a, Int *mod)
-{
-    if(a->IsGreater(this)) {
-        if(mod) mod->Set(this); 
-        CLEAR();
-        return;
+void Int::Div(Int *a,Int *mod) {
+
+  if(a->IsGreater(this)) {
+    if(mod) mod->Set(this);
+    CLEAR();
+    return;
+  }
+
+  if(a->IsZero()) {
+    printf("Divide by 0!\n");
+    return;
+  }
+
+  if(IsEqual(a)) {
+    if(mod) mod->CLEAR();
+    Set(&_ONE);
+    return;
+  }
+
+  //Division algorithm D (Knuth section 4.3.1)
+
+  Int rem(this);
+  Int d(a);
+  Int dq;
+  CLEAR();
+
+  // Size
+  uint32_t dSize = d.GetSize64();
+  uint32_t tSize = rem.GetSize64();
+  uint32_t qSize = tSize - dSize + 1;
+
+  // D1 normalize the divisor (d!=0)
+  uint32_t shift = (uint32_t)LZC(d.bits64[dSize-1]);
+  d.ShiftL(shift);
+  rem.ShiftL(shift);
+
+  uint64_t  _dh    = d.bits64[dSize-1];
+  uint64_t  _dl    = (dSize>1)?d.bits64[dSize-2]:0;
+  int sb = tSize-1;
+        
+  // D2 Initialize j
+  for(int j=0; j<(int)qSize; j++) {
+
+    // D3 Estimate qhat
+    uint64_t qhat = 0;
+    uint64_t qrem = 0;
+    int skipCorrection = false;
+    uint64_t nh = rem.bits64[sb-j+1];
+    uint64_t nm = rem.bits64[sb-j];
+
+    if (nh == _dh) {
+      qhat = ~0;
+      qrem = nh + nm;
+      skipCorrection = qrem < nh;
+    } else {
+      qhat = _udiv128(nh,nm,_dh,&qrem);
     }
-    if(a->IsZero()) {
-        printf("Divide by 0!\n");
-        return;
-    }
-    if(IsEqual(a)) {
-        if(mod) mod->CLEAR();
-        Set(&_ONE); 
-        return;
-    }
 
-    Int rem(this);  
-    Int d(a);       
-    Int dq;         
-    CLEAR();     
+    if (qhat == 0)
+      continue;
 
-    uint32_t dSize = d.GetSize64();  
-    uint32_t tSize = rem.GetSize64();
-    uint32_t qSize = tSize - dSize + 1;
+    if (!skipCorrection) { 
 
-    uint32_t shift = (uint32_t)LZC(d.bits64[dSize-1]); 
-    d.ShiftL(shift);  
-    rem.ShiftL(shift);
+      // Correct qhat
+      uint64_t nl = rem.bits64[sb-j-1];
 
-    uint64_t _dh = d.bits64[dSize-1]; 
-    uint64_t _dl = (dSize>1) ? d.bits64[dSize-2] : 0; 
-    int sb = tSize - 1;
-
-    for(int j = 0; j < (int)qSize; j++) {
-        uint64_t qhat = 0;
-        uint64_t qrem = 0;
-        bool skipCorrection = false;
-
-        uint64_t nh = rem.bits64[sb - j + 1];
-        uint64_t nm = rem.bits64[sb - j];
-
-        if (nh == _dh) {
-            qhat = ~0ULL; 
-            qrem = nh + nm;
-            skipCorrection = (qrem < nh);
-        } else {
-            qhat = _udiv128(nh, nm, _dh, &qrem);
-        }
-        if(qhat == 0) continue;
-
-        if(!skipCorrection) {
-            uint64_t nl = rem.bits64[sb - j - 1];
-
-            uint64_t estProH, estProL;
-            estProL = _umul128(_dl, qhat, &estProH); 
-            if(isStrictGreater128(estProH, estProL, qrem, nl)) {
-                qhat--;
-                qrem += _dh;
-                if(qrem >= _dh) {
-                    estProL = _umul128(_dl, qhat, &estProH);
-                    if(isStrictGreater128(estProH, estProL, qrem, nl)) {
-                        qhat--;
-                    }
-                }
-            }
-        }
-
-        dq.Mult(&d, qhat); 
-
-        rem.ShiftL64BitAndSub(&dq, qSize - j - 1);
-
-        if(rem.IsNegative()) {
-            rem.Add(&d); 
+      uint64_t estProH;
+      uint64_t estProL = _umul128(_dl,qhat,&estProH);
+      if( isStrictGreater128(estProH,estProL,qrem,nl) ) {
+        qhat--;
+        qrem += _dh;
+        if (qrem >= _dh) {
+          estProL = _umul128(_dl,qhat,&estProH);
+          if(isStrictGreater128(estProH,estProL,qrem,nl))
             qhat--;
         }
+      }
 
-        bits64[qSize - j - 1] = qhat;
     }
 
-    if(mod) {
-        rem.ShiftR(shift); 
-        mod->Set(&rem);    
+    // D4 Multiply and subtract    
+    dq.Mult(&d,qhat);
+    rem.ShiftL64BitAndSub(&dq,qSize-j-1);
+    if( rem.IsNegative() ) {
+      // Overflow
+      rem.Add(&d);
+      qhat--;
     }
+
+    bits64[qSize-j-1] = qhat;
+
+ }
+
+ if( mod ) {
+   // Unnormalize remainder
+   rem.ShiftR(shift);
+   mod->Set(&rem);
+ }
+
 }
 
 // ------------------------------------------------
@@ -1802,12 +1642,12 @@ void Int::Check() {
   a.Rand(pSize);
   b.Rand(pSize-64);
   t0 = Timer::get_tick();
-  uint64_t c0 = my_rdtsc();
+  uint64_t c0 = __rdtsc();
   for (int i = 0; i < 400000; i++) {
     a.Add(&b);
     a.ModInv();
   }
-  uint64_t c1 = my_rdtsc();
+  uint64_t c1 = __rdtsc();
   t1 = Timer::get_tick();
 
   printf("ModInv() Results OK : ");
@@ -1975,3 +1815,4 @@ void Int::Check() {
   Int::SetupField(&b);
 
 }
+
