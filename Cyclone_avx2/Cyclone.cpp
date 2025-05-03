@@ -1,4 +1,3 @@
-
 #include <immintrin.h>
 #include <iostream>
 #include <iomanip>
@@ -15,18 +14,6 @@
 #include <utility>
 #include <cstdint>
 #include <climits>
-
-#ifdef _WIN32
-#   include <windows.h>
-#   include <winsock2.h>
-#   include <ws2tcpip.h>
-#   pragma comment(lib, "ws2_32.lib")
-#   define close closesocket
-#else
-#   include <unistd.h>
-#   include <arpa/inet.h>
-#   include <sys/socket.h>
-#endif
 
 #include "p2pkh_decoder.h"
 #include "sha256_avx2.h"
@@ -46,8 +33,10 @@ static unsigned long long           g_candidatesFound   = 0ULL;
 static unsigned long long           g_jumpsCount        = 0ULL;
 static uint64_t                     g_jumpSize          = 0ULL;
 static std::vector<std::string>     g_threadPrivateKeys;
+static bool                         g_saveCandidates    = false; 
 
-static inline std::string bytesToHex(const uint8_t* data, size_t len) {
+static inline std::string bytesToHex(const uint8_t* data, size_t len)
+{
     static constexpr char lut[] = "0123456789abcdef";
     std::string out; out.reserve(len * 2);
     for (size_t i = 0; i < len; ++i) {
@@ -62,25 +51,28 @@ static void appendCandidateToFile(const std::string& privHex,
                                   const std::string& pubHex,
                                   const std::string& hash160Hex)
 {
+    ++g_candidatesFound;                 // счётчик растёт всегда
+    if (!g_saveCandidates) return;       // но запись только при -s
+
 #pragma omp critical(candidates_io)
     {
         std::ofstream ofs("candidates.txt", std::ios::app);
-        if (ofs) ofs << privHex << ' ' << pubHex << ' ' << hash160Hex << '\n';
-        else     std::cerr << "Cannot open candidates.txt for writing\n";
-        ++g_candidatesFound;
+        if (ofs)
+            ofs << privHex << ' ' << pubHex << ' ' << hash160Hex << '\n';
+        else
+            std::cerr << "Cannot open candidates.txt for writing\n";
     }
 }
 
-void saveProgressToFile(const std::string &progressStr) {
+void saveProgressToFile(const std::string &progressStr)
+{
     std::ofstream ofs("progress.txt", std::ios::app);
-    if (ofs) {
-        ofs << progressStr << "\n";
-    } else {
-        std::cerr << "Cannot open progress.txt for writing\n";
-    }
+    if (ofs) ofs << progressStr << "\n";
+    else     std::cerr << "Cannot open progress.txt for writing\n";
 }
 
-std::vector<uint64_t> hexToBigNum(const std::string& hex) {
+std::vector<uint64_t> hexToBigNum(const std::string& hex)
+{
     std::vector<uint64_t> bigNum;
     const size_t len = hex.size();
     bigNum.reserve((len + 15) / 16);
@@ -93,7 +85,8 @@ std::vector<uint64_t> hexToBigNum(const std::string& hex) {
     return bigNum;
 }
 
-std::string bigNumToHex(const std::vector<uint64_t>& num) {
+std::string bigNumToHex(const std::vector<uint64_t>& num)
+{
     std::ostringstream oss;
     oss << std::hex;
     for (auto it = num.rbegin(); it != num.rend(); ++it) {
@@ -103,9 +96,7 @@ std::string bigNumToHex(const std::vector<uint64_t>& num) {
     return oss.str();
 }
 
-std::vector<uint64_t> singleElementVector(uint64_t v) {
-    return {v};
-}
+std::vector<uint64_t> singleElementVector(uint64_t v) { return {v}; }
 
 std::vector<uint64_t> bigNumAdd(const std::vector<uint64_t>& a,
                                 const std::vector<uint64_t>& b)
@@ -161,7 +152,8 @@ std::pair<std::vector<uint64_t>, uint64_t> bigNumDivide(
     return {q, r};
 }
 
-long double hexStrToLongDouble(const std::string& h) {
+long double hexStrToLongDouble(const std::string& h)
+{
     long double res = 0.0L;
     for (char c: h) {
         res *= 16.0L;
@@ -172,49 +164,55 @@ long double hexStrToLongDouble(const std::string& h) {
     return res;
 }
 
-static inline std::string padHexTo64(const std::string& h) {
+static inline std::string padHexTo64(const std::string& h)
+{
     return (h.size() >= 64) ? h : std::string(64 - h.size(), '0') + h;
 }
 
-static inline Int hexToInt(const std::string& h) {
+static inline Int hexToInt(const std::string& h)
+{
     Int n; char buf[65] = {0};
     std::strncpy(buf, h.c_str(), 64);
     n.SetBase16(buf);
     return n;
 }
 
-static inline std::string intToHex(const Int& v) {
+static inline std::string intToHex(const Int& v)
+{
     Int t; t.Set((Int*)&v); return t.GetBase16();
 }
 
-static inline bool intGreater(const Int& a,const Int& b) {
+static inline bool intGreater(const Int& a,const Int& b)
+{
     std::string ha=((Int&)a).GetBase16(), hb=((Int&)b).GetBase16();
     return ha.size()!=hb.size() ? ha.size()>hb.size() : ha>hb;
 }
 
-static inline bool isEven(const Int& n) {
-    return ((Int&)n).IsEven();
-}
+static inline bool isEven(const Int& n) { return n.IsEven(); } 
 
-static inline std::string intXToHex64(const Int& x) {
+static inline std::string intXToHex64(const Int& x)
+{
     Int t; t.Set((Int*)&x);
     std::string h=t.GetBase16();
     if (h.size()<64) h.insert(0,64-h.size(),'0');
     return h;
 }
 
-static inline std::string pointToCompressedHex(const Point& p) {
+static inline std::string pointToCompressedHex(const Point& p)
+{
     return (isEven(p.y) ? "02" : "03") + intXToHex64(p.x);
 }
 
-static inline void pointToCompressedBin(const Point& p,uint8_t out[33]) {
+static inline void pointToCompressedBin(const Point& p,uint8_t out[33])
+{
     out[0] = isEven(p.y) ? 0x02 : 0x03;
     Int t; t.Set((Int*)&p.x);
     for (int i = 0; i < 32; ++i)
         out[1+i] = uint8_t(t.GetByte(31-i));
 }
 
-inline void prepareShaBlock(const uint8_t* src,size_t len,uint8_t* out){
+inline void prepareShaBlock(const uint8_t* src,size_t len,uint8_t* out)
+{
     std::fill_n(out,64,0);
     std::memcpy(out,src,len);
     out[len]=0x80;
@@ -225,7 +223,8 @@ inline void prepareShaBlock(const uint8_t* src,size_t len,uint8_t* out){
     out[63]=uint8_t(bitLen    );
 }
 
-inline void prepareRipemdBlock(const uint8_t* src,uint8_t* out){
+inline void prepareRipemdBlock(const uint8_t* src,uint8_t* out)
+{
     std::fill_n(out,64,0);
     std::memcpy(out,src,32);
     out[32]=0x80;
@@ -284,13 +283,15 @@ static void computeHash160BatchBinSingle(int nKeys,
     }
 }
 
-static void printUsage(const char* prog){
+static void printUsage(const char* prog)
+{
     std::cerr<<"Usage: "<<prog
              <<" -a <Base58_P2PKH> -r <START:END>"
-             <<" [-p <HEXLEN>] [-j <JUMP>]\n";
+             <<" [-p <HEXLEN>] [-j <JUMP>] [-s]\n";
 }
 
-static std::string formatElapsedTime(double sec){
+static std::string formatElapsedTime(double sec)
+{
     int h=int(sec)/3600, m=(int(sec)%3600)/60, s=int(sec)%60;
     std::ostringstream oss;
     oss<<std::setw(2)<<std::setfill('0')<<h<<":"
@@ -299,20 +300,28 @@ static std::string formatElapsedTime(double sec){
     return oss.str();
 }
 
-static void printStats(int nCPU, const std::string& addr,
-                       const std::string& range, double mks,
-                       unsigned long long checked, double elapsed,
-                       int saves, long double prog,
-                       bool showCand, unsigned long long candCnt,
-                       bool showJump, unsigned long long jumpCnt)
+static void printStats(int nCPU,
+                       const std::string& addr,
+                       const std::string& hashHex,
+                       const std::string& range,
+                       double mks,
+                       unsigned long long checked,
+                       double elapsed,
+                       int saves,
+                       long double prog,
+                       bool showCand,
+                       unsigned long long candCnt,
+                       bool showJump,
+                       unsigned long long jumpCnt)
 {
-    const int lines = 9 + (showCand?1:0) + (showJump?1:0);
+    const int lines = 10 + (showCand?1:0) + (showJump?1:0); // +1 за Hash160
     static bool first=true;
     if(!first) std::cout<<"\033["<<lines<<"A";
     else       first=false;
 
     std::cout<<"================= WORK IN PROGRESS =================\n"
              <<"Target Address: "<<addr<<"\n"
+             <<"Hash160       : "<<hashHex<<"\n"
              <<"CPU Threads   : "<<nCPU<<"\n"
              <<"Mkeys/s       : "<<std::fixed<<std::setprecision(2)<<mks<<"\n"
              <<"Total Checked : "<<checked<<"\n"
@@ -330,10 +339,9 @@ static std::vector<ThreadRange> g_threadRanges;
 
 int main(int argc, char* argv[])
 {
-
-    bool        aOK=false, rOK=false, pOK=false, jOK=false;
-    int         prefLenHex=0;
-    uint64_t    jumpSize=0ULL;
+    bool aOK=false, rOK=false, pOK=false, jOK=false, sOK=false;
+    int  prefLenHex=0;
+    uint64_t jumpSize=0ULL;
     std::string targetAddress, rangeStr;
     std::vector<uint8_t> targetHash160;
 
@@ -353,6 +361,12 @@ int main(int argc, char* argv[])
         }
         else if(!std::strcmp(argv[i],"-j") && i+1<argc){
             jumpSize=std::stoull(argv[++i]); jOK=true;
+            if(jumpSize==0){
+                std::cerr<<"-j must be >0\n"; return 1;
+            }
+        }
+        else if(!std::strcmp(argv[i],"-s")){
+            sOK=true;
         }
         else{
             printUsage(argv[0]); return 1;
@@ -360,20 +374,21 @@ int main(int argc, char* argv[])
     }
     if(!aOK||!rOK){ printUsage(argv[0]); return 1; }
     if(jOK&&!pOK){ std::cerr<<"-j requires -p\n"; return 1; }
-    if(jOK&&jumpSize==0){ std::cerr<<"-j must be >0\n"; return 1; }
-    if(jOK&&jumpSize>INT32_MAX){
-        std::cerr<<"-j value too large (max "<<INT32_MAX<<")\n";
-        return 1;
-    }
+
+    g_saveCandidates = sOK;          
 
     const bool partialEnabled = pOK;
     const bool jumpEnabled    = jOK;
-    g_jumpSize = jumpEnabled ? jumpSize : 0ULL;
+    g_jumpSize                = jumpEnabled ? jumpSize : 0ULL;
+
+    std::string targetHashHex = bytesToHex(targetHash160.data(),
+                                           targetHash160.size());
 
     size_t colon=rangeStr.find(':');
     if(colon==std::string::npos){ std::cerr<<"Bad range\n"; return 1; }
     std::string startHex=rangeStr.substr(0,colon);
     std::string endHex  =rangeStr.substr(colon+1);
+
     auto startBN=hexToBigNum(startHex), endBN=hexToBigNum(endHex);
 
     bool okRange=false;
@@ -386,12 +401,14 @@ int main(int argc, char* argv[])
         }
     }
     if(!okRange){ std::cerr<<"Range start > end\n"; return 1; }
+
     auto rangeSize=bigNumAdd(bigNumSubtract(endBN,startBN),
                              singleElementVector(1ULL));
     long double totalRangeLD=hexStrToLongDouble(bigNumToHex(rangeSize));
 
     int numCPUs=omp_get_num_procs();
     g_threadPrivateKeys.assign(numCPUs,"0");
+
     auto [chunk,remainder]=bigNumDivide(rangeSize,(uint64_t)numCPUs);
     g_threadRanges.resize(numCPUs);
     std::vector<uint64_t> cur=startBN;
@@ -419,9 +436,6 @@ int main(int argc, char* argv[])
     Int i512; i512.SetInt32(510);
     Point big512G=secp.ComputePublicKey(&i512);
 
-    const int  prefBytes  = partialEnabled ? prefLenHex/2 : 0;
-    const bool halfNibble = partialEnabled ? (prefLenHex&1) : false;
-
 #pragma omp parallel num_threads(numCPUs) \
     shared(globalChecked,globalElapsed,mkeys,matchFound, \
            foundPriv,foundPub,foundWIF, \
@@ -429,18 +443,20 @@ int main(int argc, char* argv[])
            g_threadPrivateKeys,g_candidatesFound,g_jumpsCount)
     {
         int tid=omp_get_thread_num();
+
         Int   priv    = hexToInt(g_threadRanges[tid].startHex);
         const Int privEnd=hexToInt(g_threadRanges[tid].endHex);
         Point base=secp.ComputePublicKey(&priv);
 
+        /*--- подготовка плюс/минус точек для batch ---*/
         std::vector<Point> plus(POINTS_BATCH_SIZE), minus(POINTS_BATCH_SIZE);
         for(int i=0;i<POINTS_BATCH_SIZE;++i){
             Int t; t.SetInt32(i);
             Point p=secp.ComputePublicKey(&t);
             plus[i]=p; p.y.ModNeg(); minus[i]=p;
         }
-        std::vector<Int> deltaX(POINTS_BATCH_SIZE);
-        IntGroup modGrp(POINTS_BATCH_SIZE);
+        std::vector<Int>  deltaX(POINTS_BATCH_SIZE);
+        IntGroup          modGrp(POINTS_BATCH_SIZE);
 
         const int fullBatch=2*POINTS_BATCH_SIZE;
         std::vector<Point> ptBatch(fullBatch);
@@ -448,7 +464,13 @@ int main(int argc, char* argv[])
         uint8_t hashRes[HASH_BATCH_SIZE][20];
         int localCnt=0, idxArr[HASH_BATCH_SIZE];
         unsigned long long localChecked=0ULL;
-        unsigned long long localJumps=0ULL;
+        unsigned long long localJumps   =0ULL;
+
+        Int jumpInt;
+        if(jumpEnabled){
+            std::ostringstream oss; oss << std::hex << g_jumpSize;
+            jumpInt = hexToInt(oss.str());        
+        }
 
         while(!matchFound){
             if(intGreater(priv,privEnd)) break;
@@ -460,6 +482,7 @@ int main(int argc, char* argv[])
                 deltaX[i].ModSub(&plus[i].x,&base.x);
             }
             modGrp.Set(deltaX.data()); modGrp.ModInv();
+
             for(int i=0;i<POINTS_BATCH_SIZE;++i){
                 Point r=base;
                 Int dY; dY.ModSub(&plus[i].y,&base.y);
@@ -484,27 +507,36 @@ int main(int argc, char* argv[])
             }
 
             unsigned int pendingJumps=0;
+
             for(int i=0;i<fullBatch;++i){
                 pointToCompressedBin(ptBatch[i],pubKeys[localCnt]);
-                idxArr[localCnt]=i; ++localCnt;
+                idxArr[localCnt]=i;
+                ++localCnt;
                 if(localCnt==HASH_BATCH_SIZE){
                     computeHash160BatchBinSingle(localCnt,pubKeys,hashRes);
                     for(int j=0;j<HASH_BATCH_SIZE;++j){
                         const uint8_t* cand=hashRes[j];
+
                         bool prefixOK=true;
                         if(partialEnabled){
-                            if(prefBytes &&
-                               std::memcmp(cand,targetHash160.data(),prefBytes)!=0)
+                            const int prefBytes  = prefLenHex/2;
+                            const bool halfNibble= (prefLenHex&1);
+
+                            if (prefBytes &&
+                                std::memcmp(cand,targetHash160.data(),prefBytes)!=0)
                                 prefixOK=false;
+
                             if(prefixOK && halfNibble){
-                                if ((cand[prefBytes] & 0xF0) != (targetHash160[prefBytes] & 0xF0))
-								prefixOK = false;
+                                if ((cand[prefBytes] & 0xF0) !=
+                                    (targetHash160[prefBytes] & 0xF0))
+                                    prefixOK=false;
                             }
                             if(prefixOK){
                                 Int cPriv=priv;
                                 int idx=idxArr[j];
                                 if(idx<256){ Int off; off.SetInt32(idx); cPriv.Add(&off); }
                                 else       { Int off; off.SetInt32(idx-256); cPriv.Sub(&off); }
+
                                 appendCandidateToFile(
                                     padHexTo64(intToHex(cPriv)),
                                     pointToCompressedHex(ptBatch[idx]),
@@ -513,6 +545,7 @@ int main(int argc, char* argv[])
                                 if(jumpEnabled) ++pendingJumps;
                             }
                         }
+
                         if(std::memcmp(cand,targetHash160.data(),20)==0){
 #pragma omp critical(full_match)
                             {
@@ -535,27 +568,32 @@ int main(int argc, char* argv[])
                 }
             }
 
+
             if(jumpEnabled && pendingJumps>0){
-                Int jInt; jInt.SetInt32(int(g_jumpSize));
-                for(unsigned int pj=0; pj<pendingJumps; ++pj){
-                    priv.Add(&jInt);
-                }
+                for(unsigned int pj=0; pj<pendingJumps; ++pj)
+                    priv.Add(&jumpInt);              
+
                 base = secp.ComputePublicKey(&priv);
-                unsigned long long skipped=
-                    static_cast<unsigned long long>(pendingJumps)*g_jumpSize;
-                localChecked+=skipped;
-                localJumps+=pendingJumps;
+
+                unsigned long long skipped =
+                    static_cast<unsigned long long>(pendingJumps) * g_jumpSize;
+                localChecked += skipped;
+                localJumps   += pendingJumps;
+
 #pragma omp atomic
-                g_jumpsCount+=pendingJumps;
-                pendingJumps=0;
+                g_jumpsCount += pendingJumps;
+
+                pendingJumps  = 0;
                 if(intGreater(priv,privEnd)) break;
             }
+
 
             {
                 Int step; step.SetInt32(fullBatch-2);
                 priv.Add(&step);
                 base=secp.AddDirect(base,big512G);
             }
+
 
             auto now=std::chrono::high_resolution_clock::now();
             if(std::chrono::duration<double>(now-lastStat).count()
@@ -564,14 +602,14 @@ int main(int argc, char* argv[])
 #pragma omp critical
                 {
                     globalChecked   += localChecked; localChecked=0ULL;
-                    globalElapsed    = std::chrono::duration<double>(
-                                          now - tStart).count();
+                    globalElapsed    =
+                        std::chrono::duration<double>(now - tStart).count();
                     mkeys            = globalChecked/globalElapsed/1e6;
                     long double prog = totalRangeLD>0.0L
                         ? (globalChecked/totalRangeLD*100.0L)
                         : 0.0L;
 
-                    printStats(numCPUs,targetAddress,displayRange,
+                    printStats(numCPUs,targetAddress,targetHashHex,displayRange,
                                mkeys,globalChecked,globalElapsed,
                                g_progressSaveCount,prog,
                                partialEnabled,g_candidatesFound,
@@ -604,10 +642,11 @@ int main(int argc, char* argv[])
                     lastSave=now;
                 }
             }
-        } 
+        } /* while */
+
 #pragma omp atomic
         globalChecked += localChecked;
-    } 
+    } /* omp parallel */
 
     if(!matchFound){
         std::cout<<"\nNo match found.\n";
