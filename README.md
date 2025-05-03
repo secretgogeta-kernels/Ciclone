@@ -15,6 +15,7 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 - **Progress saving**: Progress is saved every 5 minutes during work in the **progress.txt** file.
 - **Probabilistik search**: You can add -j key and jump forward after partial match between generated Hash160 and given Hash160
 - **Partial match**: You can add -p key and save all of the partial match Hash160 to the candidates.txt file
+- **Save candidates**: Only when -s key is add.
 
 ---
 
@@ -70,7 +71,7 @@ Speed         : 50.9930 Mkeys/s
 ```
 **Probabilistik search**
 ```bash
-root@DESKTOP-BD9V01U:/mnt/e/VM/Cyclone# ./Cyclone -a 128z5d7nN7PkCuX5qoA4Ys6pmxUYnEy86k -r FAC875:6FAC3875 -p 6 -j 10000000
+root@DESKTOP-BD9V01U:/mnt/e/VM/Cyclone# ./Cyclone -a 128z5d7nN7PkCuX5qoA4Ys6pmxUYnEy86k -r FAC875:6FAC3875 -p 6 -j 10000000 -s
 ================= WORK IN PROGRESS =================
 Target Address: 128z5d7nN7PkCuX5qoA4Ys6pmxUYnEy86k
 CPU Threads   : 16
@@ -163,6 +164,7 @@ To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt 
 For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
 
 ## 🚧**VERSIONS**
+**V1.3**: Added the -s key to save candidates into the candidates.txt file. Added Hash160 to the statistics output  (AVX2 version!)  
 **V1.2**: Added keys: -p (partial match -> writes to the candidates.txt file, example -p 6 (comparison of the first 6 HEX) and -j (jump forward after partial match, example -j 1000000) (AVX2 version!)  
 **V1.1**: Speed up to 20% (AVX2 version!)  
 **V1.0**: Release
