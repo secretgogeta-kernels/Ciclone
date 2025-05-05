@@ -448,7 +448,6 @@ int main(int argc, char* argv[])
         const Int privEnd=hexToInt(g_threadRanges[tid].endHex);
         Point base=secp.ComputePublicKey(&priv);
 
-        /*--- подготовка плюс/минус точек для batch ---*/
         std::vector<Point> plus(POINTS_BATCH_SIZE), minus(POINTS_BATCH_SIZE);
         for(int i=0;i<POINTS_BATCH_SIZE;++i){
             Int t; t.SetInt32(i);
