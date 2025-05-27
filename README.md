@@ -164,6 +164,7 @@ To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt 
 For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
 
 ## 🚧**VERSIONS**
+**V1.4**: Added the -t key, threads for Cyclone start. Also added --public-deny, it skips any public key whose compressed X-coordinate starts with K leading zero hex digits, preventing it from entering the AVX2 hashing pipeline. Speed up to 5% of search.  
 **V1.3**: Added the -s key to save candidates into the candidates.txt file. Added Hash160 to the statistics output  (AVX2 version!)  
 **V1.2**: Added keys: -p (partial match -> writes to the candidates.txt file, example -p 6 (comparison of the first 6 HEX) and -j (jump forward after partial match, example -j 1000000) (AVX2 version!)  
 **V1.1**: Speed up to 20% (AVX2 version!)  
