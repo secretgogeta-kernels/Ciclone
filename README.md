@@ -16,6 +16,8 @@ I extend our gratitude to Jean-Luc Pons for his foundational contributions to th
 - **Probabilistik search**: You can add -j key and jump forward after partial match between generated Hash160 and given Hash160
 - **Partial match**: You can add -p key and save all of the partial match Hash160 to the candidates.txt file
 - **Save candidates**: Only when -s key is add.
+- **Threads**: You can add -t key for starting Cyclone on a few threads, not on total CPU threads.
+- **Skipping public key**: Skipping and not hashing public keys if they do not match the mask (--publc-deny 2 - skip each public key which starts 2 leading zeroes).  
 
 ---
 
