@@ -33,7 +33,8 @@ static unsigned long long           g_candidatesFound   = 0ULL;
 static unsigned long long           g_jumpsCount        = 0ULL;
 static uint64_t                     g_jumpSize          = 0ULL;
 static std::vector<std::string>     g_threadPrivateKeys;
-static bool                         g_saveCandidates    = false; 
+static bool                         g_saveCandidates    = false;
+
 
 static inline std::string bytesToHex(const uint8_t* data, size_t len)
 {
@@ -51,8 +52,8 @@ static void appendCandidateToFile(const std::string& privHex,
                                   const std::string& pubHex,
                                   const std::string& hash160Hex)
 {
-    ++g_candidatesFound;                
-    if (!g_saveCandidates) return;    
+    ++g_candidatesFound;
+    if (!g_saveCandidates) return;
 
 #pragma omp critical(candidates_io)
     {
@@ -188,7 +189,7 @@ static inline bool intGreater(const Int& a,const Int& b)
     return ha.size()!=hb.size() ? ha.size()>hb.size() : ha>hb;
 }
 
-static inline bool isEven(const Int& n) { return n.IsEven(); } 
+static inline bool isEven(const Int& n) { return n.IsEven(); }
 
 static inline std::string intXToHex64(const Int& x)
 {
@@ -233,6 +234,21 @@ inline void prepareRipemdBlock(const uint8_t* src,uint8_t* out)
     out[61]=uint8_t(bitLen>>16);
     out[62]=uint8_t(bitLen>> 8);
     out[63]=uint8_t(bitLen    );
+}
+
+static inline bool isDeniedPub(const uint8_t pub[33], int denyHexLen)
+{
+    if (denyHexLen <= 0) return false;
+    int fullBytes   = denyHexLen / 2;
+    bool halfNibble = denyHexLen & 1;
+
+    for (int i = 0; i < fullBytes; ++i)
+        if (pub[1 + i] != 0x00) return false;          
+
+    if (halfNibble) {
+        if ((pub[1 + fullBytes] & 0xF0) != 0x00) return false; 
+    }
+    return true;   
 }
 
 static void computeHash160BatchBinSingle(int nKeys,
@@ -287,7 +303,8 @@ static void printUsage(const char* prog)
 {
     std::cerr<<"Usage: "<<prog
              <<" -a <Base58_P2PKH> -r <START:END>"
-             <<" [-p <HEXLEN>] [-j <JUMP>] [-s]\n";
+             <<" [-p <HEXLEN>] [-j <JUMP>] [-s]"
+             <<" [-t <THREADS>] [--public-deny <HEXLEN>]\n";
 }
 
 static std::string formatElapsedTime(double sec)
@@ -314,7 +331,7 @@ static void printStats(int nCPU,
                        bool showJump,
                        unsigned long long jumpCnt)
 {
-    const int lines = 10 + (showCand?1:0) + (showJump?1:0); 
+    const int lines = 10 + (showCand?1:0) + (showJump?1:0);
     static bool first=true;
     if(!first) std::cout<<"\033["<<lines<<"A";
     else       first=false;
@@ -340,8 +357,13 @@ static std::vector<ThreadRange> g_threadRanges;
 int main(int argc, char* argv[])
 {
     bool aOK=false, rOK=false, pOK=false, jOK=false, sOK=false;
-    int  prefLenHex=0;
-    uint64_t jumpSize=0ULL;
+    bool tOK=false,  denyOK=false;
+
+    int  prefLenHex   = 0;
+    uint64_t jumpSize = 0ULL;
+    int  userThreads  = 0;     
+    int  denyHexLen   = 0;   
+
     std::string targetAddress, rangeStr;
     std::vector<uint8_t> targetHash160;
 
@@ -368,6 +390,18 @@ int main(int argc, char* argv[])
         else if(!std::strcmp(argv[i],"-s")){
             sOK=true;
         }
+        else if(!std::strcmp(argv[i],"-t") && i+1<argc){
+            userThreads=std::stoi(argv[++i]); tOK=true;
+            if(userThreads<1){
+                std::cerr<<"-t must be >0\n"; return 1;
+            }
+        }
+        else if(!std::strcmp(argv[i],"--public-deny") && i+1<argc){
+            denyHexLen=std::stoi(argv[++i]); denyOK=true;
+            if(denyHexLen<1||denyHexLen>64){
+                std::cerr<<"--public-deny must be 1-64\n"; return 1;
+            }
+        }
         else{
             printUsage(argv[0]); return 1;
         }
@@ -375,11 +409,14 @@ int main(int argc, char* argv[])
     if(!aOK||!rOK){ printUsage(argv[0]); return 1; }
     if(jOK&&!pOK){ std::cerr<<"-j requires -p\n"; return 1; }
 
-    g_saveCandidates = sOK;          
-
-    const bool partialEnabled = pOK;
-    const bool jumpEnabled    = jOK;
+    g_saveCandidates      = sOK;
+    const bool partialEnabled  = pOK;
+    const bool jumpEnabled     = jOK;
+    const bool pubDenyEnabled  = denyOK;
     g_jumpSize                = jumpEnabled ? jumpSize : 0ULL;
+
+    int hwThreads = omp_get_num_procs();
+    int numCPUs   = tOK ? std::min(userThreads, hwThreads) : hwThreads;
 
     std::string targetHashHex = bytesToHex(targetHash160.data(),
                                            targetHash160.size());
@@ -406,7 +443,6 @@ int main(int argc, char* argv[])
                              singleElementVector(1ULL));
     long double totalRangeLD=hexStrToLongDouble(bigNumToHex(rangeSize));
 
-    int numCPUs=omp_get_num_procs();
     g_threadPrivateKeys.assign(numCPUs,"0");
 
     auto [chunk,remainder]=bigNumDivide(rangeSize,(uint64_t)numCPUs);
@@ -436,6 +472,7 @@ int main(int argc, char* argv[])
     Int i512; i512.SetInt32(510);
     Point big512G=secp.ComputePublicKey(&i512);
 
+
 #pragma omp parallel num_threads(numCPUs) \
     shared(globalChecked,globalElapsed,mkeys,matchFound, \
            foundPriv,foundPub,foundWIF, \
@@ -459,7 +496,7 @@ int main(int argc, char* argv[])
 
         const int fullBatch=2*POINTS_BATCH_SIZE;
         std::vector<Point> ptBatch(fullBatch);
-        uint8_t pubKeys[fullBatch][33];
+        uint8_t pubKeys[HASH_BATCH_SIZE][33];
         uint8_t hashRes[HASH_BATCH_SIZE][20];
         int localCnt=0, idxArr[HASH_BATCH_SIZE];
         unsigned long long localChecked=0ULL;
@@ -468,7 +505,7 @@ int main(int argc, char* argv[])
         Int jumpInt;
         if(jumpEnabled){
             std::ostringstream oss; oss << std::hex << g_jumpSize;
-            jumpInt = hexToInt(oss.str());        
+            jumpInt = hexToInt(oss.str());
         }
 
         while(!matchFound){
@@ -508,9 +545,19 @@ int main(int argc, char* argv[])
             unsigned int pendingJumps=0;
 
             for(int i=0;i<fullBatch;++i){
-                pointToCompressedBin(ptBatch[i],pubKeys[localCnt]);
+                uint8_t tmpPub[33];
+                pointToCompressedBin(ptBatch[i], tmpPub);
+
+
+                if(pubDenyEnabled && isDeniedPub(tmpPub, denyHexLen)){
+                    ++localChecked;      
+                    continue;             
+                }
+
+                std::memcpy(pubKeys[localCnt], tmpPub, 33);
                 idxArr[localCnt]=i;
                 ++localCnt;
+
                 if(localCnt==HASH_BATCH_SIZE){
                     computeHash160BatchBinSingle(localCnt,pubKeys,hashRes);
                     for(int j=0;j<HASH_BATCH_SIZE;++j){
@@ -565,12 +612,12 @@ int main(int argc, char* argv[])
                     }
                     localCnt=0;
                 }
-            }
+            } 
 
 
             if(jumpEnabled && pendingJumps>0){
                 for(unsigned int pj=0; pj<pendingJumps; ++pj)
-                    priv.Add(&jumpInt);              
+                    priv.Add(&jumpInt);   
 
                 base = secp.ComputePublicKey(&priv);
 
@@ -586,13 +633,11 @@ int main(int argc, char* argv[])
                 if(intGreater(priv,privEnd)) break;
             }
 
-
             {
                 Int step; step.SetInt32(fullBatch-2);
                 priv.Add(&step);
                 base=secp.AddDirect(base,big512G);
             }
-
 
             auto now=std::chrono::high_resolution_clock::now();
             if(std::chrono::duration<double>(now-lastStat).count()
@@ -641,11 +686,11 @@ int main(int argc, char* argv[])
                     lastSave=now;
                 }
             }
-        } /* while */
+        } 
 
 #pragma omp atomic
         globalChecked += localChecked;
-    } /* omp parallel */
+    } 
 
     if(!matchFound){
         std::cout<<"\nNo match found.\n";
