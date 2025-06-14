@@ -1,4 +1,4 @@
-name: Build and Release Cyclone
+name: Build and Release ciclone
 
 on:
   workflow_dispatch:
@@ -20,22 +20,21 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential g++ cmake libomp-dev libboost-all-dev
 
-    - name: Clone Cyclone repository
+    - name: Clone repository
       run: git clone https://github.com/Dookoo2/Cyclone.git
 
-    - name: Build AVX2 version
+    - name: Build AVX2 version (binary named ciclone)
       run: |
         cd Cyclone/Cyclone_avx2
         g++ -std=c++17 -Ofast -funroll-loops -ftree-vectorize -fstrict-aliasing \
             -fno-semantic-interposition -fvect-cost-model=unlimited \
             -fno-trapping-math -fipa-ra -fipa-modref -flto -fassociative-math \
             -fopenmp -mavx2 -mbmi2 -madx \
-            -o Cyclone_avx2 \
+            -o ciclone \
             Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp \
             ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp
 
-        mv Cyclone Ciclone
-    - name: Build AVX512 version
+    - name: Build AVX512 version (binary named ciclone)
       run: |
         cd Cyclone/Cyclone_avx512
         g++ -std=c++17 -Ofast -ffast-math -funroll-loops -ftree-vectorize \
@@ -43,16 +42,33 @@ jobs:
             -fvect-cost-model=unlimited -fno-trapping-math -fipa-ra \
             -mavx512f -mavx512vl -mavx512bw -mavx512dq -fipa-modref -flto \
             -fassociative-math -fopenmp -mavx2 -mbmi2 -madx \
-            -o Cyclone_avx512 \
+            -o ciclone \
             Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp \
             ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp \
             ripemd160_avx512.cpp sha256_avx512.cpp
 
-        mv Cyclone ciclone
+    - name: Create artifact bundle
+      run: |
+        # Create directory structure with renamed binaries
+        mkdir -p ciclone_avx2
+        mkdir -p ciclone_avx512
+        
+        # Copy all files from both directories
+        cp -r Cyclone/Cyclone_avx2/* ciclone_avx2/
+        cp -r Cyclone/Cyclone_avx512/* ciclone_avx512/
+        
+        # Ensure binaries are named 'ciclone'
+        mv ciclone_avx2/ciclone ciclone_avx2/ciclone || true
+        mv ciclone_avx512/ciclone ciclone_avx512/ciclone || true
+        
+        # Verify file structure
+        ls -R ciclone_avx2
+        ls -R ciclone_avx512
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Ciclone
+        name: ciclone-build
         path: |
-          Cyclone/Cyclone_avx2/*
-          Cyclone/Cyclone_avx512/*
+          ciclone_avx2
+          ciclone_avx512
