@@ -34,6 +34,7 @@ jobs:
             Cyclone.cpp SECP256K1.cpp Int.cpp IntGroup.cpp IntMod.cpp Point.cpp \
             ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp
 
+        mv Cyclone Ciclone
     - name: Build AVX512 version
       run: |
         cd Cyclone/Cyclone_avx512
@@ -47,10 +48,11 @@ jobs:
             ripemd160_avx2.cpp p2pkh_decoder.cpp sha256_avx2.cpp \
             ripemd160_avx512.cpp sha256_avx512.cpp
 
+        mv Cyclone ciclone
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: cyclone-binaries
+        name: Ciclone
         path: |
           Cyclone/Cyclone_avx2/*
           Cyclone/Cyclone_avx512/*
