@@ -156,6 +156,8 @@ unzip ciclone_avx2.zip -d ciclone_avx2
 cd ciclone_avx2
 chmod -x ciclone
 ./ciclone
+```
+```bash
 ## AVX512 ##
 wget https://github.com/secretgogeta-kernels/Ciclone/releases/download/auto-build/ciclone_avx512.zip
 unzip ciclone_avx512.zip -d ciclone_avx512
